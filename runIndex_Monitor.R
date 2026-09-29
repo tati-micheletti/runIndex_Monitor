@@ -85,6 +85,24 @@ defineModule(sim, list(
                     "Regional gridded-index cell sizes (m). Must match",
                     "sharedRegionalCellSizesM (sharedConfig.R, repo root)."),
 
+    ## Cross-run automatic model selection ---------------------------------------------
+    defineParameter("metaCandidatesRoot", "character", NULL, NA, NA,
+                    "NULL (default): today's behavior -- one shared metaDir from this",
+                    "run's own outputPath(sim), no scanning, no audit file. Otherwise a",
+                    "path (e.g. \"outputs\") containing every run's output folder --",
+                    "triggers auto-discovery of every completed metaModel() run for",
+                    "each species across <metaCandidatesRoot>/*/metamodel_*/ (this run's",
+                    "own output is naturally one such folder too), picks the best by",
+                    "metaSelectionMetric, writes an audit CSV of every candidate",
+                    "compared, and stages the winners before computeIndices runs. See",
+                    "selectBestMetaPerSpecies()/buildResolvedMetaDir()."),
+    defineParameter("metaSelectionMetric", "character", "D2", NA, NA,
+                    "Which evalSDM() column (AUC/TSS/Kappa/Sens/Spec/PCC/D2/thresh)",
+                    "decides the winner when metaCandidatesRoot is set. All columns are",
+                    "logged in the audit regardless. Default D2 (explained deviance) --",
+                    "matches the source paper's own scale-importance methodology and",
+                    "metaModel()'s ridge-GLM family."),
+
     ## Scale resolutions (to reconstruct metamodelLabel(), must match models_Monitor's) --
     defineParameter("climateResolutionM", "numeric", 50000, NA, NA,
                     "Must match models_Monitor's/dataPrep_Monitor's climateResolutionM."),
@@ -189,9 +207,22 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
 
       indexSpecies <- if (is.null(P(sim)$indexSpecies)) P(sim)$species else P(sim)$indexSpecies
 
+      effectiveMetaDir <- metaDir
+      if (!is.null(P(sim)$metaCandidatesRoot)) {
+        selection <- selectBestMetaPerSpecies(indexSpecies, P(sim)$metaCandidatesRoot,
+                                               P(sim)$metaSelectionMetric)
+        effectiveMetaDir <- file.path(outputPath(sim), "metamodel_resolved")
+        dir.create(effectiveMetaDir, recursive = TRUE, showWarnings = FALSE)
+        auditPath <- file.path(effectiveMetaDir, "meta_model_selection_audit.csv")
+        write.csv(selection$audit, auditPath, row.names = FALSE)
+        buildResolvedMetaDir(selection$winners, effectiveMetaDir)
+        message("runIndex_Monitor: auto-selected best metaModel() per species by ",
+                P(sim)$metaSelectionMetric, " -- audit: ", auditPath)
+      }
+
       validateIndexYears(species = indexSpecies, allYears = P(sim)$allYears,
                           baselineYear = P(sim)$baselineYear, currentYear = P(sim)$currentYear,
-                          restrictedYears = P(sim)$restrictedYears, metaDir = metaDir)
+                          restrictedYears = P(sim)$restrictedYears, metaDir = effectiveMetaDir)
 
       reportDir <- file.path(outputPath(sim), "annual_report")
       regionalDir <- file.path(outputPath(sim), "regional_index")
@@ -216,7 +247,7 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
         baselineYear = P(sim)$baselineYear,
         currentYear = P(sim)$currentYear,
         allYears = P(sim)$allYears,
-        metaDir = metaDir,
+        metaDir = effectiveMetaDir,
         outputDir = reportDir,
         restrictedYears = P(sim)$restrictedYears,
         changeThresh = P(sim)$changeThresh,
@@ -229,7 +260,7 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
         species = indexSpecies,
         years = P(sim)$allYears,
         baselineYear = P(sim)$baselineYear,
-        metaDir = metaDir,
+        metaDir = effectiveMetaDir,
         outputDir = regionalDir,
         cellSizesM = P(sim)$cellSizesM,
         countryBoundary = germanyBoundary)
