@@ -11,6 +11,11 @@
 #' the pre-existing root-level `runIndex.R` script always ran it -- see
 #' DECISIONS.md's 2026-09-28 "runIndex_Monitor" entry).
 #'
+#' NOTE: this exact function is deliberately duplicated verbatim across
+#' modules (same filename) so each has no load-time dependency on another
+#' module being loaded. Keep all copies byte-identical --
+#' tools/check_duplicated_functions.R checks this.
+#'
 #' @param layers List of single-layer SpatRasters, each already named via
 #'   `names(r) <- "..."`.
 #' @return SpatRaster, all layers, in-memory, names taken from each input
