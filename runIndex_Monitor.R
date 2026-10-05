@@ -104,6 +104,20 @@ defineModule(sim, list(
                     "metaModel()'s ridge-GLM family."),
 
     ## Scale resolutions (to reconstruct metamodelLabel(), must match models_Monitor's) --
+    defineParameter("uncertaintyDir", "character", NULL, NA, NA,
+                    "NULL (default): no uncertainty intervals. Otherwise models_Monitor's uncertainty folder",
+                    "(outputs/<run>/uncertainty): after the normal index, computeIndexUncertainty() adds",
+                    "species_index_uncertainty.csv and combined_index_uncertainty.csv (SBI and Chain, interval",
+                    "from the bootstrap replicates) next to the annual report's files and stitches the",
+                    "community maps. See computeIndexUncertainty()."),
+    defineParameter("uncertaintyOnly", "logical", FALSE, NA, NA,
+                    "TRUE: run ONLY computeIndexUncertainty() (skip the baseline index; used by the cluster",
+                    "chain after the uncertainty band jobs). Requires uncertaintyDir."),
+    defineParameter("uncertaintyProbs", "numeric", c(0.05, 0.95), NA, NA,
+                    "Percentiles of the interval (default 5th-95th = 90%); must match models_Monitor's."),
+    defineParameter("uncertaintyBands", "numeric", 16, NA, NA,
+                    "Number of bands the uncertainty community pieces were written in; must match models_Monitor's."),
+
     defineParameter("climateResolutionM", "numeric", 50000, NA, NA,
                     "Must match models_Monitor's/dataPrep_Monitor's climateResolutionM."),
     defineParameter("habitatResolutionM", "numeric", 200, NA, NA,
@@ -153,6 +167,11 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
       if (identical(P(sim)$allYears, NA_real_) || identical(P(sim)$currentYear, NA_real_)) {
         stop("runIndex_Monitor's allYears/currentYear parameters must be supplied ",
              "explicitly (e.g. predictionYears/max(habitatYears)) -- no default.")
+      }
+      if (isTRUE(P(sim)$uncertaintyOnly)) {
+        if (is.null(P(sim)$uncertaintyDir)) stop("uncertaintyOnly = TRUE needs the uncertaintyDir parameter.")
+        sim <- scheduleEvent(sim, time(sim), "runIndex_Monitor", "computeIndexUncertainty")
+        return(invisible(sim))
       }
       mod$pollStartTime <- Sys.time()
       sim <- scheduleEvent(sim, time(sim), "runIndex_Monitor", "checkAllInputs")
@@ -266,7 +285,23 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
         countryBoundary = germanyBoundary)
 
       message("\nDone. Report -> ", reportDir, " | Regional maps -> ", regionalDir)
+      if (!is.null(P(sim)$uncertaintyDir)) {
+        sim <- scheduleEvent(sim, time(sim), "runIndex_Monitor", "computeIndexUncertainty")
+      }
       # ! ----- STOP EDITING ----- ! #
+    },
+
+    computeIndexUncertainty = {
+      indexSpecies <- if (is.null(P(sim)$indexSpecies)) P(sim)$species else P(sim)$indexSpecies
+      message("=== Index uncertainty (bootstrap replicates) ===")
+      computeIndexUncertainty(
+        species = indexSpecies,
+        uncertaintyDir = P(sim)$uncertaintyDir,
+        reportDir = file.path(outputPath(sim), "annual_report"),
+        baselineYear = P(sim)$baselineYear,
+        currentYear = P(sim)$currentYear,
+        probs = P(sim)$uncertaintyProbs,
+        nBands = P(sim)$uncertaintyBands)
     },
 
     warning(noEventWarning(sim))
