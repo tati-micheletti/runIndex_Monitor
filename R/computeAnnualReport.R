@@ -68,8 +68,9 @@
 #'   `combinedIndexAnalytical`, `combinedIndexMSI`, `combinedIndexChain`,
 #'   `combinedIndexChainRestricted` (NULL if `restrictedYears` is NULL)
 #'   (data.frames), `srMap` (SpatRaster), and `changeMaps` (named list by
-#'   comparison: `vsBaseline`, `vs5YearsAgo`, `vsLastYear`, each as returned
-#'   by `computeChangeMaps()`). Everything is also written to `outputDir`.
+#'   comparison: `vsBaseline`, `vs5YearsAgo`, `vsLastYear`, each only the PATH
+#'   pattern the maps were written to -- the rasters themselves are not kept in
+#'   memory, see the note in the loop). Everything is also written to `outputDir`.
 computeAnnualReport <- function(species, baselineYear, currentYear, allYears,
                                  metaDir, outputDir, restrictedYears = NULL,
                                  changeThresh = 0.05, nBoot = 999, nSim = 1000,
@@ -193,6 +194,10 @@ computeAnnualReport <- function(species, baselineYear, currentYear, allYears,
                           overwrite = TRUE)
     }
     message("Saved -> change_", compName, "_* (community + per-species)")
+    # Keep only WHERE the maps were written, not the rasters: three comparisons x (11 species x 3 layers + 4 community layers)
+    # at 15M cells is ~13 GB in memory, which killed the EVE index job at 32 GB (the maps are already on disk).
+    changeMaps[[compName]] <- list(writtenTo = file.path(outputDir, paste0("change_", compName, "_*.tif")))
+    rm(cm); invisible(gc())
   }
 
   invisible(list(speciesIndex = indexMat, combinedIndexSBI = combinedIndexSBI,
