@@ -68,6 +68,10 @@ defineModule(sim, list(
     defineParameter("currentYear", "numeric", NA_real_, NA, NA,
                     "The year this annual report is \"for\" -- no default (errors if",
                     "unset); typically max(habitatYears)."),
+    defineParameter("outputTag", "character", "", NA, NA,
+                    "\"\" (default): read metamodel_<label> and write annual_report / regional_index. A tag such as \"ens\" reads",
+                    "metamodel_<label>_ens (the ensemble meta-model) and writes annual_report_ens / regional_index_ens, so the",
+                    "two versions never overwrite each other."),
     defineParameter("restrictedYears", "numeric", NULL, NA, NA,
                     "NULL (default): skip the Chain-index robustness check. Otherwise",
                     "years with real (non-hindcast) ground truth (e.g. habitatYears) --",
@@ -182,7 +186,7 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
       resolutionsM <- c(europe = P(sim)$climateResolutionM,
                          habitat = P(sim)$habitatResolutionM,
                          landscape = P(sim)$landscapeResolutionM)
-      metaDir <- file.path(outputPath(sim), metamodelLabel(resolutionsM))
+      metaDir <- file.path(outputPath(sim), paste0(metamodelLabel(resolutionsM), if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else ""))
 
       # Whichever years the report/index actually needs real metaModel()
       # output for: currentYear + restrictedYears (allYears' broader series
@@ -218,7 +222,7 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
       resolutionsM <- c(europe = P(sim)$climateResolutionM,
                          habitat = P(sim)$habitatResolutionM,
                          landscape = P(sim)$landscapeResolutionM)
-      metaDir <- file.path(outputPath(sim), metamodelLabel(resolutionsM))
+      metaDir <- file.path(outputPath(sim), paste0(metamodelLabel(resolutionsM), if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else ""))
       if (!dir.exists(metaDir)) {
         stop("runIndex_Monitor: no metaModel() output found at ", metaDir,
              " -- has models_Monitor's metaModel event run in this session?")
@@ -243,8 +247,8 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
                           baselineYear = P(sim)$baselineYear, currentYear = P(sim)$currentYear,
                           restrictedYears = P(sim)$restrictedYears, metaDir = effectiveMetaDir)
 
-      reportDir <- file.path(outputPath(sim), "annual_report")
-      regionalDir <- file.path(outputPath(sim), "regional_index")
+      reportDir <- file.path(outputPath(sim), paste0("annual_report", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else ""))
+      regionalDir <- file.path(outputPath(sim), paste0("regional_index", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else ""))
 
       # Same GADM level-0 fetch/cache pattern as bootstrapMetaModelTrend()'s
       # (models_Monitor) -- avoids cells straddling the border silently
@@ -297,7 +301,7 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
       computeIndexUncertainty(
         species = indexSpecies,
         uncertaintyDir = P(sim)$uncertaintyDir,
-        reportDir = file.path(outputPath(sim), "annual_report"),
+        reportDir = file.path(outputPath(sim), paste0("annual_report", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else "")),
         baselineYear = P(sim)$baselineYear,
         currentYear = P(sim)$currentYear,
         probs = P(sim)$uncertaintyProbs,
