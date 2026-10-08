@@ -25,9 +25,11 @@
 #' @param baselineYear,currentYear Integer. Index baseline; report year of the community change maps.
 #' @param probs Numeric length 2. Interval percentiles (default 5th-95th = 90%).
 #' @param nBands Integer. Number of bands the community pieces were written in.
+#' @param areaMeanFile Character. Per-species file of replicate area means: `area_mean_replicates.csv` (all pixels of the prediction window) or
+#'   `area_mean_replicates_germany.csv` (German pixels only, from the regional step).
 #' @return Invisibly, a list with `species` and `combined` (data.frames), or NULL if the baseline year was not mapped.
 computeIndexUncertainty <- function(species, uncertaintyDir, reportDir, baselineYear, currentYear,
-                                     probs = c(0.05, 0.95), nBands = 16) {
+                                     probs = c(0.05, 0.95), nBands = 16, areaMeanFile = "area_mean_replicates.csv") {
   dir.create(reportDir, recursive = TRUE, showWarnings = FALSE)
 
   # 1. community maps: stitch the band pieces
@@ -49,11 +51,11 @@ computeIndexUncertainty <- function(species, uncertaintyDir, reportDir, baseline
 
   # 2. area means per species and replicate
   ams <- lapply(species, function(sp) {
-    f <- file.path(uncertaintyDir, gsub(" ", "_", sp), "area_mean_replicates.csv")
+    f <- file.path(uncertaintyDir, gsub(" ", "_", sp), areaMeanFile)
     if (file.exists(f)) utils::read.csv(f) else { warning("No area means for ", sp, " at ", f, call. = FALSE); NULL }
   })
   ams <- ams[!vapply(ams, is.null, logical(1))]
-  if (!length(ams)) stop("computeIndexUncertainty(): no area_mean_replicates.csv found under ", uncertaintyDir)
+  if (!length(ams)) stop("computeIndexUncertainty(): no ", areaMeanFile, " found under ", uncertaintyDir)
   am <- do.call(rbind, ams)
   am <- am[am$replicate != 0, ]                       # replicate 0 = the main models (consistency check), not part of an interval
   spp <- unique(am$species); years <- sort(unique(am$year))

@@ -119,6 +119,9 @@ defineModule(sim, list(
                     "chain after the uncertainty band jobs). Requires uncertaintyDir."),
     defineParameter("uncertaintyProbs", "numeric", c(0.05, 0.95), NA, NA,
                     "Percentiles of the interval (default 5th-95th = 90%); must match models_Monitor's."),
+    defineParameter("uncertaintyAreaMeanFile", "character", "area_mean_replicates.csv", NA, NA,
+                    "File of replicate area means read by computeIndexUncertainty(): area_mean_replicates.csv (all pixels",
+                    "of the window) or area_mean_replicates_germany.csv (German pixels only)."),
     defineParameter("uncertaintyBands", "numeric", 16, NA, NA,
                     "Number of bands the uncertainty community pieces were written in; must match models_Monitor's."),
 
@@ -305,7 +308,8 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
         baselineYear = P(sim)$baselineYear,
         currentYear = P(sim)$currentYear,
         probs = P(sim)$uncertaintyProbs,
-        nBands = P(sim)$uncertaintyBands)
+        nBands = P(sim)$uncertaintyBands,
+        areaMeanFile = P(sim)$uncertaintyAreaMeanFile)
     },
 
     warning(noEventWarning(sim))
