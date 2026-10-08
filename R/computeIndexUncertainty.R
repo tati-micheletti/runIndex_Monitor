@@ -42,8 +42,10 @@ computeIndexUncertainty <- function(species, uncertaintyDir, reportDir, baseline
     invisible(out)
   }
   stitch(pcs("SRprob", currentYear), file.path(cdir, sprintf("richness_expected_unc_%d.tif", currentYear)))
-  for (comp in c("vsBaseline", "vs5YearsAgo", "vsLastYear"))
+  for (comp in c("vsBaseline", "vs5YearsAgo", "vsLastYear")) {
     stitch(pcs("meanDeltaP", comp), file.path(cdir, sprintf("community_meanDeltaP_unc_%s.tif", comp)))
+    stitch(pcs("bcDissim", comp), file.path(cdir, sprintf("community_turnoverBC_unc_%s.tif", comp)))   # Bray-Curtis turnover, 5 layers
+  }
 
   # 2. area means per species and replicate
   ams <- lapply(species, function(sp) {

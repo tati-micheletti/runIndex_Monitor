@@ -194,7 +194,7 @@ computeAnnualReport <- function(species, baselineYear, currentYear, allYears,
                           overwrite = TRUE)
     }
     message("Saved -> change_", compName, "_* (community + per-species)")
-    # Keep only WHERE the maps were written, not the rasters: three comparisons x (11 species x 3 layers + 4 community layers)
+    # Keep only WHERE the maps were written, not the rasters: three comparisons x (11 species x 3 layers + 5 community layers)
     # at 15M cells is ~13 GB in memory, which killed the EVE index job at 32 GB (the maps are already on disk).
     changeMaps[[compName]] <- list(writtenTo = file.path(outputDir, paste0("change_", compName, "_*.tif")))
     rm(cm); invisible(gc())

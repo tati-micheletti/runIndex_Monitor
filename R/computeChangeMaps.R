@@ -26,12 +26,18 @@
 #'   - `perSpecies`: named list (by species) of 3-layer SpatRasters
 #'     (`deltaP`, `gainLoss`, `stableIncDec`), or `NULL` for a species
 #'     missing either year.
-#'   - `community`: a 4-layer SpatRaster (`meanDeltaP`, `netGainLoss`,
-#'     `gainCount`, `lossCount`), aggregated across all species with valid
-#'     data for both years.
+#'   - `community`: a 5-layer SpatRaster (`meanDeltaP`, `netGainLoss`,
+#'     `gainCount`, `lossCount`, `turnoverBC`), aggregated across all species
+#'     with valid data for both years. `turnoverBC` is the Bray-Curtis
+#'     dissimilarity of the expected communities of the two years,
+#'     sum(|deltaP|) / sum(P_ref + P_current): 0 = unchanged, 1 = no species
+#'     in common. Unlike `meanDeltaP` (gains and losses cancel) and expected
+#'     richness (a swap of species leaves the sum unchanged), it shows turnover.
 computeChangeMaps <- function(species, yearRef, yearCurrent, metaDir, changeThresh = 0.05) {
   perSpecies <- list()
   deltaPLayers <- list()
+  absLayers <- list()     # |deltaP| (Bray-Curtis numerator)
+  totalLayers <- list()   # P_ref + P_current (Bray-Curtis denominator)
   signedLayers <- list()
   gainLayers <- list()
   lossLayers <- list()
@@ -85,6 +91,10 @@ computeChangeMaps <- function(species, yearRef, yearCurrent, metaDir, changeThre
     perSpecies[[sp]] <- combineLayersSafely(list(deltaP, gainLoss, stableIncDec))
 
     deltaPLayers[[sp]] <- deltaP
+    absP <- abs(deltaP); terra::values(absP) <- terra::values(absP)
+    absLayers[[sp]] <- absP
+    totP <- rRef[["meta_prob"]] + rCur[["meta_prob"]]; terra::values(totP) <- terra::values(totP)
+    totalLayers[[sp]] <- totP
     signedGL <- (gainLoss == 2) - (gainLoss == 1)  # +1 gain, -1 loss, 0 else
     terra::values(signedGL) <- terra::values(signedGL)
     signedLayers[[sp]] <- signedGL
@@ -120,7 +130,12 @@ computeChangeMaps <- function(species, yearRef, yearCurrent, metaDir, changeThre
     lossCount <- terra::app(combineLayersSafely(lossLayers), fun = "sum", na.rm = TRUE)
     names(lossCount) <- "lossCount"
     terra::values(lossCount) <- terra::values(lossCount)
-    community <- combineLayersSafely(list(meanDeltaP, netGainLoss, gainCount, lossCount))
+    sumAbs <- terra::app(combineLayersSafely(absLayers), fun = "sum", na.rm = TRUE)
+    sumTot <- terra::app(combineLayersSafely(totalLayers), fun = "sum", na.rm = TRUE)
+    turnoverBC <- sumAbs / terra::ifel(sumTot < 1e-12, 1e-12, sumTot)
+    names(turnoverBC) <- "turnoverBC"
+    terra::values(turnoverBC) <- terra::values(turnoverBC)
+    community <- combineLayersSafely(list(meanDeltaP, netGainLoss, gainCount, lossCount, turnoverBC))
   }
 
   list(perSpecies = perSpecies, community = community)
