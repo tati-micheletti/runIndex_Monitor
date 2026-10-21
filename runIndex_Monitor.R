@@ -57,6 +57,8 @@ defineModule(sim, list(
                     "NULL (default): use `species` -- every polled species is also",
                     "covered by the report/index. Otherwise a subset of `species` to",
                     "actually build the report/index for (e.g. a restricted test run)."),
+    defineParameter("studyAreaSpec", "list", NULL, NA, NA,
+                    "The study area (tools/sharedConfig.R: sharedStudyArea): list(label, countries, regions, shapefile). The regional index is computed inside it. NULL = Germany."),
     defineParameter("baselineYear", "numeric", 2005, NA, NA,
                     "Index baseline (2005 -- the first year with genuinely real",
                     "landscape-scale training data in this pipeline). Used by the",
@@ -256,11 +258,11 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
       # Same GADM level-0 fetch/cache pattern as bootstrapMetaModelTrend()'s
       # (models_Monitor) -- avoids cells straddling the border silently
       # averaging in non-German source data.
-      germanyBoundary <- NULL
+      germanyBoundary <- NULL    # historical name: it is the study area (reporting area) now
       if (requireNamespace("geodata", quietly = TRUE)) {
         gadmCacheDir <- file.path(inputPath(sim), "predictors", "raw", "gadm")
-        dir.create(gadmCacheDir, recursive = TRUE, showWarnings = FALSE)
-        germanyBoundary <- geodata::gadm(country = "DEU", level = 0, path = gadmCacheDir)
+        spec <- P(sim)$studyAreaSpec; if (is.null(spec)) spec <- list(label = "Germany", countries = "DEU", regions = NULL, shapefile = NULL)
+        germanyBoundary <- buildStudyArea(spec, gadmCacheDir, "EPSG:3035")
       } else {
         warning("'geodata' package not installed -- computeRegionalIndex() will run ",
                 "without a country boundary (cells near the border may average in ",

@@ -37,7 +37,7 @@ aggregateSpeciesToGrid <- function(species, years, metaDir, cellSizeM, countryBo
     if (is.null(r) || !("meta_prob" %in% names(r))) return(NULL)
     r <- r[["meta_prob"]]
     if (!is.null(countryBoundary)) {
-      if (is.null(boundaryProj)) boundaryProj <<- terra::project(countryBoundary, terra::crs(r))
+      if (is.null(boundaryProj)) boundaryProj <<- if (isTRUE(terra::same.crs(countryBoundary, r))) countryBoundary else terra::project(countryBoundary, terra::crs(r))   # the study area is already in the CRS of the maps
       r <- terra::mask(terra::crop(r, boundaryProj), boundaryProj)
     }
     fact <- max(1, round(cellSizeM / terra::res(r)[1]))
