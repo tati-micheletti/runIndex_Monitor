@@ -43,7 +43,8 @@ computeIndexUncertainty <- function(species, uncertaintyDir, reportDir, baseline
     terra::writeRaster(v, out, datatype = "FLT4S", overwrite = TRUE, gdal = c("COMPRESS=DEFLATE", "PREDICTOR=3"))
     invisible(out)
   }
-  stitch(pcs("SRprob", currentYear), file.path(cdir, sprintf("richness_expected_unc_%d.tif", currentYear)))
+  srYears <- sort(unique(as.integer(sub("^SRprob_([0-9]{4})_band.*$", "\\1", list.files(file.path(cdir, "pieces"), pattern = "^SRprob_[0-9]{4}_band[0-9]+[.]tif$")))))
+  for (yr in srYears) stitch(pcs("SRprob", yr), file.path(cdir, sprintf("richness_expected_unc_%d.tif", yr)))        # expected richness of every mapped year
   for (comp in c("vsBaseline", "vs5YearsAgo", "vsLastYear")) {
     stitch(pcs("meanDeltaP", comp), file.path(cdir, sprintf("community_meanDeltaP_unc_%s.tif", comp)))
     stitch(pcs("bcDissim", comp), file.path(cdir, sprintf("community_turnoverBC_unc_%s.tif", comp)))   # Bray-Curtis turnover, 5 layers
