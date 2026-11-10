@@ -5,8 +5,8 @@
 #'   species index   I_s,t,b = 100 * areaMean_s,t,b / areaMean_s,baseline,b          (as computeSpeciesIndex())
 #'   SBI_t,b         = exp(mean over species of log I_s,t,b)                          (as computeCombinedIndex())
 #'   Chain_t,b       = 100 at the first year, then * exp(mean over species of log(I_t+1 / I_t))   (as computeChainIndex())
-#' and only then takes the mean, median and percentile interval over replicates. A replicate is the SAME bootstrap draw
-#' for every species, so the combined indices carry the model uncertainty of all species together. The interval is
+#' and only then takes the mean, median and percentile interval over replicates. A replicate is the same replicate NUMBER
+#' for every species, but NOT the same blocks: the draw seed contains the species name (uncFit.R), so the sampling errors of the species are independent of each other (see UNCERTAINTY.md, 'What is NOT covered', item 7). The combined indices carry the model uncertainty of all species with that independence. The interval is
 #' model uncertainty given the training data -- not the species-resampling interval of computeCombinedIndex().
 #'
 #' Also stitches the community band pieces (expected richness, mean change in probability) into maps.
