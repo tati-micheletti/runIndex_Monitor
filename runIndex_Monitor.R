@@ -74,6 +74,10 @@ defineModule(sim, list(
                     "\"\" (default): read metamodel_<label> and write annual_report / regional_index. A tag such as \"ens\" reads",
                     "metamodel_<label>_ens (the ensemble meta-model) and writes annual_report_ens / regional_index_ens, so the",
                     "two versions never overwrite each other."),
+    defineParameter("groupSuffix", "character", "", NA, NA,
+                    "Species GROUP of this run (2026-11-14; data/speciesGroups.csv, tools/sharedSpeciesGroups.R): \"\" (default, the group \"all\") = folder names as always.",
+                    "\"_farmland\" etc. is added at the END of the folders the report and the regional index are written to (annual_report_<tag>_farmland, regional_index_<tag>_germany_farmland)",
+                    "and to the community folder / replicate file of computeIndexUncertainty(), so a group never overwrites another. `species` must already be the species of the group."),
     defineParameter("restrictedYears", "numeric", NULL, NA, NA,
                     "NULL (default): skip the Chain-index robustness check. Otherwise",
                     "years with real (non-hindcast) ground truth (e.g. habitatYears) --",
@@ -252,8 +256,8 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
                           baselineYear = P(sim)$baselineYear, currentYear = P(sim)$currentYear,
                           restrictedYears = P(sim)$restrictedYears, metaDir = effectiveMetaDir)
 
-      reportDir <- file.path(outputPath(sim), paste0("annual_report", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else ""))
-      regionalDir <- file.path(outputPath(sim), paste0("regional_index", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else ""))
+      reportDir <- file.path(outputPath(sim), paste0("annual_report", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else "", P(sim)$groupSuffix))       # groupSuffix: "" = group "all" (as always)
+      regionalDir <- file.path(outputPath(sim), paste0("regional_index", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else "", P(sim)$groupSuffix))
 
       # Same GADM level-0 fetch/cache pattern as bootstrapMetaModelTrend()'s
       # (models_Monitor) -- avoids cells straddling the border silently
@@ -306,12 +310,12 @@ doEvent.runIndex_Monitor = function(sim, eventTime, eventType) {
       computeIndexUncertainty(
         species = indexSpecies,
         uncertaintyDir = P(sim)$uncertaintyDir,
-        reportDir = file.path(outputPath(sim), paste0("annual_report", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else "")),
+        reportDir = file.path(outputPath(sim), paste0("annual_report", if (nzchar(P(sim)$outputTag)) paste0("_", P(sim)$outputTag) else "", P(sim)$groupSuffix)),
         baselineYear = P(sim)$baselineYear,
         currentYear = P(sim)$currentYear,
         probs = P(sim)$uncertaintyProbs,
         nBands = P(sim)$uncertaintyBands,
-        areaMeanFile = P(sim)$uncertaintyAreaMeanFile)
+        areaMeanFile = P(sim)$uncertaintyAreaMeanFile, groupSuffix = P(sim)$groupSuffix)
     },
 
     warning(noEventWarning(sim))

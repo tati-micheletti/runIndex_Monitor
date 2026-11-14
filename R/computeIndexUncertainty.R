@@ -27,13 +27,15 @@
 #' @param nBands Integer. Number of bands the community pieces were written in.
 #' @param areaMeanFile Character. Per-species file of replicate area means: `area_mean_replicates.csv` (all pixels of the prediction window) or
 #'   `area_mean_replicates_germany.csv` (German pixels only, from the regional step).
+#' @param groupSuffix Character. Species group (2026-11-14): "" (default, the group "all") reads the community pieces from `<uncertaintyDir>/community` and writes `combined_index_replicates.csv` as always;
+#'   "_farmland" etc. reads `<uncertaintyDir>/community_farmland` and writes `combined_index_replicates_farmland.csv`. `species` must be the species of the group.
 #' @return Invisibly, a list with `species` and `combined` (data.frames), or NULL if the baseline year was not mapped.
 computeIndexUncertainty <- function(species, uncertaintyDir, reportDir, baselineYear, currentYear,
-                                     probs = c(0.05, 0.95), nBands = 16, areaMeanFile = "area_mean_replicates.csv") {
+                                     probs = c(0.05, 0.95), nBands = 16, areaMeanFile = "area_mean_replicates.csv", groupSuffix = "") {
   dir.create(reportDir, recursive = TRUE, showWarnings = FALSE)
 
   # 1. community maps: stitch the band pieces
-  cdir <- file.path(uncertaintyDir, "community")
+  cdir <- file.path(uncertaintyDir, paste0("community", groupSuffix))
   pcs <- function(kind, name) file.path(cdir, "pieces", sprintf("%s_%s_band%02d.tif", kind, name, seq_len(nBands)))
   stitch <- function(files, out) {
     files <- files[file.exists(files)]
@@ -95,7 +97,7 @@ computeIndexUncertainty <- function(species, uncertaintyDir, reportDir, baseline
     data.frame(replicate = r, year = years, SBI = sbi, Chain = chain)
   })
   rep <- do.call(rbind, rows)
-  utils::write.csv(rep, file.path(uncertaintyDir, "combined_index_replicates.csv"), row.names = FALSE)
+  utils::write.csv(rep, file.path(uncertaintyDir, paste0("combined_index_replicates", groupSuffix, ".csv")), row.names = FALSE)
   combined <- do.call(rbind, lapply(c("SBI", "Chain"), function(m) do.call(rbind, lapply(split(rep, rep$year), function(d) data.frame(
     method = m, year = d$year[1], nReplicates = nrow(d), estimate = mean(d[[m]]), median = stats::median(d[[m]]),
     lwr = q(d[[m]], probs[1]), upr = q(d[[m]], probs[2]))))))
